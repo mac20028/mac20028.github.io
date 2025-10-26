@@ -1,0 +1,86 @@
+//CLIENT CODE : 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+public class ex22client { 
+    public static final String SERVER = "127.0.0.1"; 
+    public static final int PORT = 12345; 
+    public static void main(String[] args) { 
+        try ( 
+            Socket socket = new Socket(SERVER, PORT); 
+            DataInputStream dis = new DataInputStream(socket.getInputStream()); 
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream()); 
+            Scanner scanner = new Scanner(System.in); 
+        ) { 
+            System.out.print("Do you want to upload or download? (upload/download): "); 
+            String choice = scanner.nextLine(); 
+            dos.writeUTF(choice); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                System.out.print("Enter path of file to upload: "); 
+                String filePath = scanner.nextLine(); 
+                File file = new File(filePath); 
+ 
+                if (!file.exists()) { 
+                    System.out.println("File does not exist."); 
+                    return; 
+                } 
+ 
+                dos.writeUTF(file.getName()); 
+                FileInputStream fis = new FileInputStream(file); 
+                byte[] buffer = new byte[1024]; 
+                int bytes; 
+ 
+                while ((bytes = fis.read(buffer)) != -1) { 
+                    dos.write(buffer, 0, bytes); 
+                } 
+                fis.close(); 
+                dos.write("DONE".getBytes()); 
+                System.out.println("[+] Upload complete."); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                int fileCount = dis.readInt(); 
+                if (fileCount == 0) { 
+                    System.out.println("No files available on the server."); 
+                    return; 
+                } 
+ 
+                System.out.println("Available files:"); 
+                List<String> fileList = new ArrayList<>(); 
+                for (int i = 0; i < fileCount; i++) { 
+                    String fname = dis.readUTF(); 
+                    fileList.add(fname); 
+                    System.out.println((i + 1) + ". " + fname); 
+                } 
+ 
+                System.out.print("Enter filename to download: "); 
+                String fileToDownload = scanner.nextLine(); 
+                dos.writeUTF(fileToDownload); 
+ 
+                FileOutputStream fos = new FileOutputStream("downloaded_" + fileToDownload); 
+                byte[] buffer = new byte[1024]; 
+                int bytes; 
+ 
+                while ((bytes = dis.read(buffer)) != -1) { 
+                    String check = new String(buffer, 0, bytes); 
+                    if (check.equals("DONE") || check.equals("ERROR")) break; 
+                    fos.write(buffer, 0, bytes); 
+                    if (bytes < 1024) break; 
+                } 
+                fos.close(); 
+ 
+                if (new String(buffer, 0, bytes).equals("ERROR")) { 
+                    System.out.println("[-] File not found on server."); 
+                } else { 
+                    System.out.println("[+] Download complete. Saved as downloaded_" + 
+fileToDownload); 
+                } 
+            } else { 
+                System.out.println("Invalid choice."); 
+            } 
+ 
+        } catch (IOException e) { 
+            System.err.println("[-] Client error: " + e.getMessage()); 
+        } 
+    } 
+}

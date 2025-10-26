@@ -1,0 +1,84 @@
+//SERVER CODE : 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex22server { 
+    public static final int PORT = 12345; 
+    public static final String REPO_FOLDER = "repository"; 
+ 
+    public static void main(String[] args) { 
+        new File(REPO_FOLDER).mkdirs(); // Create repository folder 
+ 
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) { 
+            System.out.println("[+] Server is listening on port " + PORT); 
+ 
+            while (true) { 
+                Socket socket = serverSocket.accept(); 
+                System.out.println("[+] Connected: " + socket.getInetAddress()); 
+ 
+                new Thread(() -> handleClient(socket)).start(); 
+            } 
+ 
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        } 
+    } 
+ 
+    public static void handleClient(Socket socket) { 
+        try ( 
+            DataInputStream dis = new DataInputStream(socket.getInputStream()); 
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream()); 
+        ) { 
+            String choice = dis.readUTF(); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                String filename = dis.readUTF(); 
+                FileOutputStream fos = new FileOutputStream(REPO_FOLDER + "/" + filename); 
+                int bytes; 
+                byte[] buffer = new byte[1024]; 
+ 
+                while ((bytes = dis.read(buffer)) != -1) { 
+                    String check = new String(buffer, 0, bytes); 
+                    if (check.equals("DONE")) break; 
+                    fos.write(buffer, 0, bytes); 
+                    if (bytes < 1024) break; 
+                } 
+                fos.close(); 
+                System.out.println("[+] File uploaded: " + filename); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                File folder = new File(REPO_FOLDER); 
+                File[] files = folder.listFiles(); 
+ 
+                if (files != null && files.length > 0) { 
+                    dos.writeInt(files.length); 
+                    for (File f : files) { 
+                        dos.writeUTF(f.getName()); 
+                    } 
+ 
+                    String requestedFile = dis.readUTF(); 
+                    File fileToSend = new File(REPO_FOLDER + "/" + requestedFile); 
+ 
+                    if (fileToSend.exists()) { 
+                        FileInputStream fis = new FileInputStream(fileToSend); 
+                        byte[] buffer = new byte[1024]; 
+                        int bytes; 
+                        while ((bytes = fis.read(buffer)) != -1) { 
+                            dos.write(buffer, 0, bytes); 
+                        } 
+                        fis.close(); 
+                        dos.write("DONE".getBytes()); 
+                        System.out.println("[+] File sent: " + requestedFile); 
+                    } else { 
+                        dos.write("ERROR".getBytes()); 
+                    } 
+                } else { 
+                    dos.writeInt(0); 
+                } 
+            } 
+        } catch (IOException e) { 
+            System.err.println("[-] Error: " + e.getMessage()); 
+        } 
+    } 
+} 

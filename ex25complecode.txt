@@ -1,0 +1,86 @@
+//2.5 server
+import java.net.*;  
+import java.io.*;  
+import java.text.SimpleDateFormat;  
+import java.util.*;  
+ public class ex25s {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        String[] questions = {  
+            "What is the capital of France?",  
+            "2 + 2 = ?",  
+            "Which planet is known as the Red Planet?"  
+        };  
+   
+try {  
+            DatagramSocket socket = new DatagramSocket();  
+            socket.setBroadcast(true);  
+            System.out.println("Quiz Server started...");  
+            for (String q : questions) {  
+                byte[] buffer = q.getBytes();  
+                DatagramPacket packet = new DatagramPacket(  
+                    buffer, buffer.length,  
+                    InetAddress.getByName("255.255.255.255"), PORT  
+                );  
+                socket.send(packet);  
+                System.out.println("\nBroadcasted Question: " + q);
+                long start = System.currentTimeMillis();  
+                socket.setSoTimeout(10000);  
+                while (System.currentTimeMillis() - start < 10000) {  
+                    try {  
+                        byte[] receiveBuffer = new byte[1024];  
+                        DatagramPacket response = new DatagramPacket(receiveBuffer, 
+receiveBuffer.length);  
+                        socket.receive(response);  
+                        String answer = new String(response.getData(), 0, response.getLength());  
+                       String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());  
+                       System.out.println("[" + timeStamp + "] From "   
+                            + response.getAddress().getHostAddress() + ": " + answer);  
+   
+                    } catch (SocketTimeoutException e) {  
+                        System.out.println("Time over for this question!");  
+                        break;  
+                    }  
+                }  
+            }  
+   
+            socket.close();  
+            System.out.println("\nQuiz ended. Server shutting down.");  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+//2.5 client code
+import java.net.*;  
+import java.io.*;  
+import java.util.Scanner;  
+   
+public class ex25c {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+   
+        try {  
+            DatagramSocket socket = new DatagramSocket(PORT);  
+            byte[] buffer = new byte[1024];  
+            Scanner sc = new Scanner(System.in);  
+            System.out.println("Quiz Client started... Waiting for questions...");  
+            while (true) {  
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);  
+                socket.receive(packet);  
+                String question = new String(packet.getData(), 0, packet.getLength());  
+                System.out.println("\nQuestion: " + question);  
+                System.out.print("Your Answer: ");  
+                String answer = sc.nextLine();  
+                byte[] ansData = answer.getBytes();  
+                DatagramPacket ansPacket = new DatagramPacket(  
+                    ansData, ansData.length, packet.getAddress(), packet.getPort()  
+                );  
+                socket.send(ansPacket);  
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 

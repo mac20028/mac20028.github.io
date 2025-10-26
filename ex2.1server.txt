@@ -1,0 +1,42 @@
+//Server Code (TCPServer.java): 
+ import java.io.*; 
+import java.net.*; 
+ 
+public class ex21server { 
+public static void main(String[] args) { 
+ServerSocket serverSocket = null; 
+Socket clientSocket = null; 
+try { 
+            serverSocket = new ServerSocket(6789); // Server listening on port 6789 
+            System.out.println("Server started. Waiting for client..."); 
+ 
+            clientSocket = serverSocket.accept(); 
+            System.out.println("Client connected."); 
+ 
+            BufferedReader in = new BufferedReader( 
+                new InputStreamReader(clientSocket.getInputStream())); 
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true); 
+ 
+            String message; 
+            while ((message = in.readLine()) != null) { 
+                System.out.println("Received from client: " + message); 
+                // Echo the message back to client 
+                out.println(message); 
+            } 
+ 
+            System.out.println("Client disconnected."); 
+        } catch (IOException e) { 
+            System.out.println("Server exception: " + e.getMessage()); 
+        }  
+      finally { 
+            try { 
+                if (clientSocket != null) 
+                    clientSocket.close(); 
+                if (serverSocket != null) 
+                    serverSocket.close(); 
+            } catch (IOException e) { 
+                System.out.println("Error closing sockets: " + e.getMessage()); 
+            } 
+        } 
+    } 
+} 

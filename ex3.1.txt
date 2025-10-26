@@ -1,0 +1,138 @@
+//3.1
+
+//(ServiceImplementation.java)
+import java.rmi.RemoteException; 
+import java.rmi.server.UnicastRemoteObject; 
+public class ServiceImplementation extends UnicastRemoteObject implements ServiceInterface 
+{ 
+    protected ServiceImplementation() throws RemoteException { 
+        super(); 
+    } 
+    public double calculateCGPA(double[] grades) throws RemoteException { 
+        double total = 0; 
+        for(double g : grades) { 
+            total += g; 
+        } 
+        return total / grades.length; 
+     }
+    public double celsiusToFahrenheit(double celsius) throws RemoteException { 
+        return (celsius * 9/5) + 32; 
+    } 
+    public double calculate(String operation, double a, double b) throws RemoteException { 
+        switch (operation.toLowerCase()) { 
+            case "add": return a + b; 
+            case "sub": return a - b; 
+            case "mul": return a * b; 
+            case "div":  
+                if(b == 0) throw new ArithmeticException("Division by zero"); 
+                return a / b; 
+            default: throw new UnsupportedOperationException("Invalid operation"); 
+        } 
+    } 
+}
+
+
+//Server.java
+
+
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.registry.Registry; 
+public class Server { 
+    public static void main(String[] args) { 
+        try { 
+            // Create and export remote object 
+            ServiceImplementation service = new ServiceImplementation(); 
+            // Start RMI registry on port 1099 
+            Registry registry = LocateRegistry.createRegistry(1099); 
+            // Bind the remote object's stub in the registry 
+            registry.rebind("Service", service); 
+            System.out.println("Server is ready..."); 
+        } catch (Exception e) { 
+            System.out.println("Server exception: " + e.toString()); 
+            e.printStackTrace(); 
+        } 
+    } 
+}
+
+
+//Client.java
+
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.registry.Registry; 
+import java.util.Scanner; 
+public class Client { 
+    public static void main(String[] args) { 
+        try { 
+            Registry registry = LocateRegistry.getRegistry("localhost"); 
+            ServiceInterface stub = (ServiceInterface) registry.lookup("Service"); 
+            Scanner sc = new Scanner(System.in); 
+            while(true) { 
+                System.out.println("\nChoose a service:"); 
+                System.out.println("1. CGPA Calculation"); 
+                System.out.println("2. Celsius to Fahrenheit"); 
+                System.out.println("3. Simple Calculator"); 
+                System.out.println("4. Exit"); 
+                System.out.print("Enter choice: "); 
+                int choice = sc.nextInt(); 
+                if(choice == 4) { 
+                    System.out.println("Exiting..."); 
+                    break; 
+                } 
+                switch (choice) { 
+                    case 1: 
+                        System.out.print("Enter number of subjects: "); 
+                        int n = sc.nextInt(); 
+                        double[] grades = new double[n]; 
+                        for (int i = 0; i < n; i++) { 
+                            System.out.print("Enter grade for subject " + (i + 1) + ": "); 
+                            grades[i] = sc.nextDouble(); 
+                        } 
+                        double cgpa = stub.calculateCGPA(grades); 
+                        System.out.println("Calculated CGPA: " + cgpa); 
+                        break; 
+       case 2: 
+                        System.out.print("Enter temperature in Celsius: "); 
+                        double celsius = sc.nextDouble(); 
+                        double fahrenheit = stub.celsiusToFahrenheit(celsius); 
+                        System.out.println("Temperature in Fahrenheit: " + fahrenheit); 
+                        break; 
+                    case 3: 
+                        System.out.print("Enter operation (add, sub, mul, div): "); 
+                        String op = sc.next(); 
+                        System.out.print("Enter first number: "); 
+                        double a = sc.nextDouble(); 
+                        System.out.print("Enter second number: "); 
+                        double b = sc.nextDouble(); 
+                        try { 
+                            double result = stub.calculate(op, a, b); 
+                            System.out.println("Result: " + result); 
+                        } catch (Exception e) { 
+                            System.out.println("Error: " + e.getMessage()); 
+                        } 
+                        break; 
+                    default: 
+                        System.out.println("Invalid choice"); 
+                } 
+            } 
+            sc.close(); 
+        } catch (Exception e) { 
+            System.out.println("Client exception: " + e.toString()); 
+            e.printStackTrace(); 
+        } 
+    } 
+} 
+
+
+//ServiceInterface.java
+
+import java.rmi.Remote; 
+import java.rmi.RemoteException; 
+public interface ServiceInterface extends Remote { 
+    // CGPA calculation: takes an array of grades and returns CGPA 
+    double calculateCGPA(double[] grades) throws RemoteException; 
+ 
+    // Temperature conversion: Celsius to Fahrenheit 
+    double celsiusToFahrenheit(double celsius) throws RemoteException; 
+    // Simple calculator: operation could be "add", "sub", "mul", "div" 
+    double calculate(String operation, double a, double b) throws RemoteException; 
+}

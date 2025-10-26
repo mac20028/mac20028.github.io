@@ -1,0 +1,68 @@
+//UDP Server  
+ 
+import java.net.DatagramPacket; 
+import java.net.DatagramSocket; 
+ 
+public class ex24server { 
+    public static void main(String[] args) { 
+        int port = 12345; 
+        try { 
+            DatagramSocket socket = new DatagramSocket(port); 
+            System.out.println("UDP server started on port " + port + ". Waiting for messages..."); 
+ 
+            byte[] buffer = new byte[1024]; 
+            while (true) { 
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length); 
+                socket.receive(packet);  // Receive packet from client 
+                String receivedMsg = new String(packet.getData(), 0, packet.getLength()); 
+                String clientIP = packet.getAddress().getHostAddress(); 
+                int clientPort = packet.getPort(); 
+                System.out.println("Received message from " + clientIP + ":" + clientPort + " - " + 
+receivedMsg); 
+            } 
+        } catch (Exception e) { 
+            System.out.println("Error: " + e.getMessage()); 
+            e.printStackTrace(); 
+        } 
+    } 
+} 
+
+
+client code
+import java.net.DatagramPacket; 
+import java.net.DatagramSocket; 
+import java.net.InetAddress; 
+import java.util.Scanner; 
+ 
+public class ex24client { 
+    public static void main(String[] args) { 
+        Scanner scanner = new Scanner(System.in); 
+        System.out.print("Enter server IP address: "); 
+        String serverIP = scanner.nextLine(); 
+        int serverPort = 12345; 
+ 
+        try { 
+            DatagramSocket socket = new DatagramSocket(); 
+            System.out.println("Type your messages below. Type 'exit' to quit."); 
+            while (true) { 
+                System.out.print("You: "); 
+                String message = scanner.nextLine(); 
+                if (message.equalsIgnoreCase("exit")) { 
+                    break; 
+                } 
+                byte[] buffer = message.getBytes(); 
+                InetAddress serverAddress = InetAddress.getByName(serverIP); 
+ 
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, serverAddress, 
+serverPort); 
+                socket.send(packet); 
+            } 
+            socket.close(); 
+            System.out.println("Client exited."); 
+        } catch (Exception e) { 
+            System.out.println("Error: " + e.getMessage()); 
+            e.printStackTrace(); 
+        } 
+        scanner.close(); 
+    } 
+}

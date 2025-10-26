@@ -1,0 +1,48 @@
+//SERVER PROGRAM:   
+import java.net.*;  
+import java.util.Random;  
+ public class ex26server {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        Random rand = new Random();  
+        try {  
+            DatagramSocket socket = new DatagramSocket();  
+            System.out.println("Weather Server started... broadcasting every 5 seconds");  
+    while (true) {  
+                int temperature = rand.nextInt(15) + 15;     
+                int humidity = rand.nextInt(50) + 30;        
+String weatherUpdate = "Temperature: " + temperature + "C, Humidity: " + humidity + "%";  
+byte[] buffer = weatherUpdate.getBytes();  
+DatagramPacket packet = new DatagramPacket(  
+                        buffer, buffer.length,  
+                        InetAddress.getByName("127.0.0.1"), PORT);  
+socket.send(packet);  
+                System.out.println("Sent: " + weatherUpdate);  
+Thread.sleep(5000);   
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+//CLIENT PROGRAM:  
+import java.net.*;  
+public class ex26client {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        try {  
+            DatagramSocket socket = new DatagramSocket(PORT);  
+            byte[] buffer = new byte[1024];  
+            System.out.println("Weather Client started... waiting for updates");  
+while (true) {  
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);  
+                socket.receive(packet);  
+                String weatherUpdate = new String(packet.getData(), 0, packet.getLength());  
+                System.out.println("Received: " + weatherUpdate);  
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 

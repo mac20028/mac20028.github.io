@@ -1,0 +1,45 @@
+//Client Code (TCPClient.java): 
+import java.io.*; 
+import java.net.*; 
+import java.util.Scanner; 
+ 
+class ex21client { 
+    public static void main(String[] args) { 
+        Socket socket = null; 
+         
+try { 
+            socket = new Socket("localhost", 6789); // Connect to server at localhost:6789 
+            System.out.println("Connected to server."); 
+            BufferedReader in = new BufferedReader( 
+                new InputStreamReader(socket.getInputStream())); 
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true); 
+            Scanner scanner = new Scanner(System.in); 
+            String message; 
+            System.out.println("Enter messages to send to server (type 'exit' to quit):"); 
+            while (true) { 
+                System.out.print("Client: "); 
+                message = scanner.nextLine(); 
+                if (message.equalsIgnoreCase("exit")) { 
+                    break; 
+                } 
+ 
+                // Send message to server 
+                out.println(message); 
+ 
+                // Receive echoed message from server 
+                String response = in.readLine(); 
+                System.out.println("Server: " + response); 
+            } 
+            scanner.close(); 
+        } catch (IOException e) { 
+            System.out.println("Client exception: " + e.getMessage()); 
+        } finally { 
+            try { 
+                if (socket != null) 
+                    socket.close(); 
+            } catch (IOException e) { 
+                System.out.println("Error closing socket: " + e.getMessage()); 
+            } 
+        } 
+    } 
+} 

@@ -1,0 +1,197 @@
+//2.3 server code 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex23s { 
+    public static final int PORT = 9876; 
+    public static final String REPO_FOLDER = "repository"; 
+ 
+    public static void main(String[] args) throws IOException { 
+        DatagramSocket serverSocket = new DatagramSocket(PORT); 
+        byte[] receiveData = new byte[1024]; 
+        byte[] sendData; 
+ 
+        File repo = new File(REPO_FOLDER); 
+        if (!repo.exists()) repo.mkdirs(); 
+ 
+        System.out.println("[+] Server started on port " + PORT); 
+ 
+        while (true) { 
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+            serverSocket.receive(receivePacket); 
+ 
+            InetAddress clientAddress = receivePacket.getAddress(); 
+            int clientPort = receivePacket.getPort(); 
+ 
+            String choice = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                // Receive filename 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                serverSocket.receive(receivePacket); 
+                String filename = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+ 
+                // Receive file data 
+                FileOutputStream fos = new FileOutputStream(REPO_FOLDER + "/" + filename); 
+                while (true) { 
+                    receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                    serverSocket.receive(receivePacket); 
+                    String doneCheck = new String(receivePacket.getData(), 0, 
+receivePacket.getLength()); 
+                    if (doneCheck.equals("DONE")) break; 
+ 
+                    fos.write(receivePacket.getData(), 0, receivePacket.getLength()); 
+                } 
+                fos.close(); 
+                System.out.println("[+] File received: " + filename); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                // Send file list 
+                File[] files = repo.listFiles(); 
+                StringBuilder fileList = new StringBuilder(); 
+                for (File f : files) { 
+                    fileList.append(f.getName()).append(","); 
+                } 
+ 
+                sendData = fileList.toString().getBytes(); 
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
+clientAddress, clientPort); 
+                serverSocket.send(sendPacket); 
+ 
+                // Receive requested file name 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                serverSocket.receive(receivePacket); 
+                String requestedFile = new String(receivePacket.getData(), 0, 
+receivePacket.getLength()); 
+ 
+                File file = new File(REPO_FOLDER + "/" + requestedFile); 
+                if (!file.exists()) { 
+                    sendData = "ERROR".getBytes(); 
+                    sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, 
+clientPort); 
+                    serverSocket.send(sendPacket); 
+                    continue; 
+                } 
+ 
+                FileInputStream fis = new FileInputStream(file); 
+                byte[] buffer = new byte[1024]; 
+                int bytesRead; 
+                while ((bytesRead = fis.read(buffer)) != -1) { 
+                    sendPacket = new DatagramPacket(buffer, bytesRead, clientAddress, clientPort); 
+                    serverSocket.send(sendPacket); 
+                } 
+                fis.close(); 
+ 
+                sendData = "DONE".getBytes(); 
+                sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, 
+clientPort); 
+                serverSocket.send(sendPacket); 
+ 
+                System.out.println("[+] File sent: " + requestedFile); 
+            } 
+        } 
+    } 
+}
+/////
+
+// 2.3 client code 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex23c { 
+    public static final int SERVER_PORT = 9876; 
+    public static final String SERVER_IP = "127.0.0.1"; 
+ 
+    public static void main(String[] args) throws IOException { 
+        DatagramSocket clientSocket = new DatagramSocket(); 
+        InetAddress IPAddress = InetAddress.getByName(SERVER_IP); 
+        Scanner scanner = new Scanner(System.in); 
+ 
+        byte[] sendData; 
+        byte[] receiveData = new byte[1024]; 
+ 
+        System.out.print("Do you want to upload or download? "); 
+        String choice = scanner.nextLine(); 
+        sendData = choice.getBytes(); 
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+        clientSocket.send(sendPacket); 
+ 
+        if (choice.equalsIgnoreCase("upload")) { 
+            System.out.print("Enter path of file to upload: "); 
+            String filePath = scanner.nextLine(); 
+            File file = new File(filePath); 
+ 
+            if (!file.exists()) { 
+                System.out.println("File does not exist."); 
+                clientSocket.close(); 
+                return; 
+            } 
+ 
+            // Send filename 
+            sendData = file.getName().getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            // Send file data 
+            FileInputStream fis = new FileInputStream(file); 
+            byte[] buffer = new byte[1024]; 
+            int bytesRead; 
+            while ((bytesRead = fis.read(buffer)) != -1) { 
+                sendPacket = new DatagramPacket(buffer, bytesRead, IPAddress, SERVER_PORT); 
+                clientSocket.send(sendPacket); 
+            } 
+            fis.close(); 
+            // Send DONE 
+            sendData = "DONE".getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            System.out.println("[+] File uploaded."); 
+ 
+        } else if (choice.equalsIgnoreCase("download")) { 
+            // Receive file list 
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+            clientSocket.receive(receivePacket); 
+            String fileList = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+            if (fileList.trim().isEmpty()) { 
+                System.out.println("No files available."); 
+                clientSocket.close(); 
+                return; 
+            } 
+            System.out.println("Available files: " + fileList); 
+            System.out.print("Enter filename to download: "); 
+            String filename = scanner.nextLine(); 
+ 
+            // Send filename to server 
+            sendData = filename.getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            // Receive file data 
+            FileOutputStream fos = new FileOutputStream("downloaded_" + filename); 
+            while (true) { 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                clientSocket.receive(receivePacket); 
+ 
+                String check = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+                if (check.equals("DONE")) break; 
+                if (check.equals("ERROR")) { 
+                    System.out.println("[-] File not found on server."); 
+                    fos.close(); 
+                    clientSocket.close(); 
+                    return; 
+                } 
+                fos.write(receivePacket.getData(), 0, receivePacket.getLength()); 
+            } 
+            fos.close(); 
+            System.out.println("[+] File downloaded as: downloaded_" + filename); 
+        } 
+        clientSocket.close(); 
+    } 
+}
