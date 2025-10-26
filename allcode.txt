@@ -1,0 +1,895 @@
+//2.3 server code 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex23s { 
+    public static final int PORT = 9876; 
+    public static final String REPO_FOLDER = "repository"; 
+ 
+    public static void main(String[] args) throws IOException { 
+        DatagramSocket serverSocket = new DatagramSocket(PORT); 
+        byte[] receiveData = new byte[1024]; 
+        byte[] sendData; 
+ 
+        File repo = new File(REPO_FOLDER); 
+        if (!repo.exists()) repo.mkdirs(); 
+ 
+        System.out.println("[+] Server started on port " + PORT); 
+ 
+        while (true) { 
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+            serverSocket.receive(receivePacket); 
+ 
+            InetAddress clientAddress = receivePacket.getAddress(); 
+            int clientPort = receivePacket.getPort(); 
+ 
+            String choice = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                // Receive filename 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                serverSocket.receive(receivePacket); 
+                String filename = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+ 
+                // Receive file data 
+                FileOutputStream fos = new FileOutputStream(REPO_FOLDER + "/" + filename); 
+                while (true) { 
+                    receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                    serverSocket.receive(receivePacket); 
+                    String doneCheck = new String(receivePacket.getData(), 0, 
+receivePacket.getLength()); 
+                    if (doneCheck.equals("DONE")) break; 
+ 
+                    fos.write(receivePacket.getData(), 0, receivePacket.getLength()); 
+                } 
+                fos.close(); 
+                System.out.println("[+] File received: " + filename); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                // Send file list 
+                File[] files = repo.listFiles(); 
+                StringBuilder fileList = new StringBuilder(); 
+                for (File f : files) { 
+                    fileList.append(f.getName()).append(","); 
+                } 
+ 
+                sendData = fileList.toString().getBytes(); 
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
+clientAddress, clientPort); 
+                serverSocket.send(sendPacket); 
+ 
+                // Receive requested file name 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                serverSocket.receive(receivePacket); 
+                String requestedFile = new String(receivePacket.getData(), 0, 
+receivePacket.getLength()); 
+ 
+                File file = new File(REPO_FOLDER + "/" + requestedFile); 
+                if (!file.exists()) { 
+                    sendData = "ERROR".getBytes(); 
+                    sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, 
+clientPort); 
+                    serverSocket.send(sendPacket); 
+                    continue; 
+                } 
+ 
+                FileInputStream fis = new FileInputStream(file); 
+                byte[] buffer = new byte[1024]; 
+                int bytesRead; 
+                while ((bytesRead = fis.read(buffer)) != -1) { 
+                    sendPacket = new DatagramPacket(buffer, bytesRead, clientAddress, clientPort); 
+                    serverSocket.send(sendPacket); 
+                } 
+                fis.close(); 
+ 
+                sendData = "DONE".getBytes(); 
+                sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, 
+clientPort); 
+                serverSocket.send(sendPacket); 
+ 
+                System.out.println("[+] File sent: " + requestedFile); 
+            } 
+        } 
+    } 
+}
+/////
+
+// 2.3 client code 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex23c { 
+    public static final int SERVER_PORT = 9876; 
+    public static final String SERVER_IP = "127.0.0.1"; 
+ 
+    public static void main(String[] args) throws IOException { 
+        DatagramSocket clientSocket = new DatagramSocket(); 
+        InetAddress IPAddress = InetAddress.getByName(SERVER_IP); 
+        Scanner scanner = new Scanner(System.in); 
+ 
+        byte[] sendData; 
+        byte[] receiveData = new byte[1024]; 
+ 
+        System.out.print("Do you want to upload or download? "); 
+        String choice = scanner.nextLine(); 
+        sendData = choice.getBytes(); 
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+        clientSocket.send(sendPacket); 
+ 
+        if (choice.equalsIgnoreCase("upload")) { 
+            System.out.print("Enter path of file to upload: "); 
+            String filePath = scanner.nextLine(); 
+            File file = new File(filePath); 
+ 
+            if (!file.exists()) { 
+                System.out.println("File does not exist."); 
+                clientSocket.close(); 
+                return; 
+            } 
+ 
+            // Send filename 
+            sendData = file.getName().getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            // Send file data 
+            FileInputStream fis = new FileInputStream(file); 
+            byte[] buffer = new byte[1024]; 
+            int bytesRead; 
+            while ((bytesRead = fis.read(buffer)) != -1) { 
+                sendPacket = new DatagramPacket(buffer, bytesRead, IPAddress, SERVER_PORT); 
+                clientSocket.send(sendPacket); 
+            } 
+            fis.close(); 
+            // Send DONE 
+            sendData = "DONE".getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            System.out.println("[+] File uploaded."); 
+ 
+        } else if (choice.equalsIgnoreCase("download")) { 
+            // Receive file list 
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+            clientSocket.receive(receivePacket); 
+            String fileList = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+            if (fileList.trim().isEmpty()) { 
+                System.out.println("No files available."); 
+                clientSocket.close(); 
+                return; 
+            } 
+            System.out.println("Available files: " + fileList); 
+            System.out.print("Enter filename to download: "); 
+            String filename = scanner.nextLine(); 
+ 
+            // Send filename to server 
+            sendData = filename.getBytes(); 
+            sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 
+SERVER_PORT); 
+            clientSocket.send(sendPacket); 
+ 
+            // Receive file data 
+            FileOutputStream fos = new FileOutputStream("downloaded_" + filename); 
+            while (true) { 
+                receivePacket = new DatagramPacket(receiveData, receiveData.length); 
+                clientSocket.receive(receivePacket); 
+ 
+                String check = new String(receivePacket.getData(), 0, receivePacket.getLength()); 
+                if (check.equals("DONE")) break; 
+                if (check.equals("ERROR")) { 
+                    System.out.println("[-] File not found on server."); 
+                    fos.close(); 
+                    clientSocket.close(); 
+                    return; 
+                } 
+                fos.write(receivePacket.getData(), 0, receivePacket.getLength()); 
+            } 
+            fos.close(); 
+            System.out.println("[+] File downloaded as: downloaded_" + filename); 
+        } 
+        clientSocket.close(); 
+    } 
+}
+
+\\ ----------- FILE END -----------
+
+Ex 1.1
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URI;
+import java.net.SocketTimeoutException;
+public class Httpsimulation{
+	public static void main(String[] args){
+		String urlString = "https://www.bbc.com";
+		HttpURLConnection connection =null;
+		BufferedReader reader =null;
+	    try{
+               URI ur=URI.create(urlString);
+               URL url =ur.toURL();
+	       connection = (HttpURLConnection) url.openConnection();
+	       connection.setRequestMethod("GET");
+	       connection.setConnectTimeout(5000);
+	       connection.setReadTimeout(5000);
+	       connection.connect();
+	       int responsecode = connection.getResponseCode();
+	       if(responsecode != HttpURLConnection.HTTP_OK) {
+                      System.out.println("Failed to fetch content.HTTP response code: "+responsecode);
+		      return;
+		}
+               reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+	       StringBuilder content = new StringBuilder();
+	       String line;
+	       while((line = reader.readLine()) != null){
+                     content.append(line).append("\n");
+		     if(content.length() >= 500) {
+			break;
+			}
+		}
+               String result = content.toString();
+	       if(result.length() >500){
+                   result=result.substring(0,500);
+		}
+		System.out.println("First 500 characters of the page content:\n");
+                System.out.println(result);
+              }
+
+              catch(MalformedURLException e){
+                   System.out.println("invalid URL format:"+e.getMessage());
+		}
+	      catch(SocketTimeoutException e){
+                   System.out.println("connection timeout:"+e.getMessage());
+		}
+              catch(Exception e){
+                   System.out.println("Error occurred:"+e.getMessage());
+		}
+	      finally{
+                 try{
+                   if(reader!=null)
+                      reader.close();
+                    if(connection != null)
+                      connection.disconnect();
+		     }
+		 catch(Exception e){
+                    System.out.println("Error closing resources:" +e.getMessage());
+                 }
+              }
+         }
+     }
+		
+		
+
+\\ ----------- FILE END -----------
+
+//Client Code (TCPClient.java): 
+import java.io.*; 
+import java.net.*; 
+import java.util.Scanner; 
+ 
+class ex21client { 
+    public static void main(String[] args) { 
+        Socket socket = null; 
+         
+try { 
+            socket = new Socket("localhost", 6789); // Connect to server at localhost:6789 
+            System.out.println("Connected to server."); 
+            BufferedReader in = new BufferedReader( 
+                new InputStreamReader(socket.getInputStream())); 
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true); 
+            Scanner scanner = new Scanner(System.in); 
+            String message; 
+            System.out.println("Enter messages to send to server (type 'exit' to quit):"); 
+            while (true) { 
+                System.out.print("Client: "); 
+                message = scanner.nextLine(); 
+                if (message.equalsIgnoreCase("exit")) { 
+                    break; 
+                } 
+ 
+                // Send message to server 
+                out.println(message); 
+ 
+                // Receive echoed message from server 
+                String response = in.readLine(); 
+                System.out.println("Server: " + response); 
+            } 
+            scanner.close(); 
+        } catch (IOException e) { 
+            System.out.println("Client exception: " + e.getMessage()); 
+        } finally { 
+            try { 
+                if (socket != null) 
+                    socket.close(); 
+            } catch (IOException e) { 
+                System.out.println("Error closing socket: " + e.getMessage()); 
+            } 
+        } 
+    } 
+} 
+
+
+\\ ----------- FILE END -----------
+
+//Server Code (TCPServer.java): 
+ import java.io.*; 
+import java.net.*; 
+ 
+public class ex21server { 
+public static void main(String[] args) { 
+ServerSocket serverSocket = null; 
+Socket clientSocket = null; 
+try { 
+            serverSocket = new ServerSocket(6789); // Server listening on port 6789 
+            System.out.println("Server started. Waiting for client..."); 
+ 
+            clientSocket = serverSocket.accept(); 
+            System.out.println("Client connected."); 
+ 
+            BufferedReader in = new BufferedReader( 
+                new InputStreamReader(clientSocket.getInputStream())); 
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true); 
+ 
+            String message; 
+            while ((message = in.readLine()) != null) { 
+                System.out.println("Received from client: " + message); 
+                // Echo the message back to client 
+                out.println(message); 
+            } 
+ 
+            System.out.println("Client disconnected."); 
+        } catch (IOException e) { 
+            System.out.println("Server exception: " + e.getMessage()); 
+        }  
+      finally { 
+            try { 
+                if (clientSocket != null) 
+                    clientSocket.close(); 
+                if (serverSocket != null) 
+                    serverSocket.close(); 
+            } catch (IOException e) { 
+                System.out.println("Error closing sockets: " + e.getMessage()); 
+            } 
+        } 
+    } 
+} 
+
+
+\\ ----------- FILE END -----------
+
+//CLIENT CODE : 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+public class ex22client { 
+    public static final String SERVER = "127.0.0.1"; 
+    public static final int PORT = 12345; 
+    public static void main(String[] args) { 
+        try ( 
+            Socket socket = new Socket(SERVER, PORT); 
+            DataInputStream dis = new DataInputStream(socket.getInputStream()); 
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream()); 
+            Scanner scanner = new Scanner(System.in); 
+        ) { 
+            System.out.print("Do you want to upload or download? (upload/download): "); 
+            String choice = scanner.nextLine(); 
+            dos.writeUTF(choice); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                System.out.print("Enter path of file to upload: "); 
+                String filePath = scanner.nextLine(); 
+                File file = new File(filePath); 
+ 
+                if (!file.exists()) { 
+                    System.out.println("File does not exist."); 
+                    return; 
+                } 
+ 
+                dos.writeUTF(file.getName()); 
+                FileInputStream fis = new FileInputStream(file); 
+                byte[] buffer = new byte[1024]; 
+                int bytes; 
+ 
+                while ((bytes = fis.read(buffer)) != -1) { 
+                    dos.write(buffer, 0, bytes); 
+                } 
+                fis.close(); 
+                dos.write("DONE".getBytes()); 
+                System.out.println("[+] Upload complete."); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                int fileCount = dis.readInt(); 
+                if (fileCount == 0) { 
+                    System.out.println("No files available on the server."); 
+                    return; 
+                } 
+ 
+                System.out.println("Available files:"); 
+                List<String> fileList = new ArrayList<>(); 
+                for (int i = 0; i < fileCount; i++) { 
+                    String fname = dis.readUTF(); 
+                    fileList.add(fname); 
+                    System.out.println((i + 1) + ". " + fname); 
+                } 
+ 
+                System.out.print("Enter filename to download: "); 
+                String fileToDownload = scanner.nextLine(); 
+                dos.writeUTF(fileToDownload); 
+ 
+                FileOutputStream fos = new FileOutputStream("downloaded_" + fileToDownload); 
+                byte[] buffer = new byte[1024]; 
+                int bytes; 
+ 
+                while ((bytes = dis.read(buffer)) != -1) { 
+                    String check = new String(buffer, 0, bytes); 
+                    if (check.equals("DONE") || check.equals("ERROR")) break; 
+                    fos.write(buffer, 0, bytes); 
+                    if (bytes < 1024) break; 
+                } 
+                fos.close(); 
+ 
+                if (new String(buffer, 0, bytes).equals("ERROR")) { 
+                    System.out.println("[-] File not found on server."); 
+                } else { 
+                    System.out.println("[+] Download complete. Saved as downloaded_" + 
+fileToDownload); 
+                } 
+            } else { 
+                System.out.println("Invalid choice."); 
+            } 
+ 
+        } catch (IOException e) { 
+            System.err.println("[-] Client error: " + e.getMessage()); 
+        } 
+    } 
+}
+
+\\ ----------- FILE END -----------
+
+//SERVER CODE : 
+import java.io.*; 
+import java.net.*; 
+import java.util.*; 
+ 
+public class ex22server { 
+    public static final int PORT = 12345; 
+    public static final String REPO_FOLDER = "repository"; 
+ 
+    public static void main(String[] args) { 
+        new File(REPO_FOLDER).mkdirs(); // Create repository folder 
+ 
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) { 
+            System.out.println("[+] Server is listening on port " + PORT); 
+ 
+            while (true) { 
+                Socket socket = serverSocket.accept(); 
+                System.out.println("[+] Connected: " + socket.getInetAddress()); 
+ 
+                new Thread(() -> handleClient(socket)).start(); 
+            } 
+ 
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        } 
+    } 
+ 
+    public static void handleClient(Socket socket) { 
+        try ( 
+            DataInputStream dis = new DataInputStream(socket.getInputStream()); 
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream()); 
+        ) { 
+            String choice = dis.readUTF(); 
+ 
+            if (choice.equalsIgnoreCase("upload")) { 
+                String filename = dis.readUTF(); 
+                FileOutputStream fos = new FileOutputStream(REPO_FOLDER + "/" + filename); 
+                int bytes; 
+                byte[] buffer = new byte[1024]; 
+ 
+                while ((bytes = dis.read(buffer)) != -1) { 
+                    String check = new String(buffer, 0, bytes); 
+                    if (check.equals("DONE")) break; 
+                    fos.write(buffer, 0, bytes); 
+                    if (bytes < 1024) break; 
+                } 
+                fos.close(); 
+                System.out.println("[+] File uploaded: " + filename); 
+ 
+            } else if (choice.equalsIgnoreCase("download")) { 
+                File folder = new File(REPO_FOLDER); 
+                File[] files = folder.listFiles(); 
+ 
+                if (files != null && files.length > 0) { 
+                    dos.writeInt(files.length); 
+                    for (File f : files) { 
+                        dos.writeUTF(f.getName()); 
+                    } 
+ 
+                    String requestedFile = dis.readUTF(); 
+                    File fileToSend = new File(REPO_FOLDER + "/" + requestedFile); 
+ 
+                    if (fileToSend.exists()) { 
+                        FileInputStream fis = new FileInputStream(fileToSend); 
+                        byte[] buffer = new byte[1024]; 
+                        int bytes; 
+                        while ((bytes = fis.read(buffer)) != -1) { 
+                            dos.write(buffer, 0, bytes); 
+                        } 
+                        fis.close(); 
+                        dos.write("DONE".getBytes()); 
+                        System.out.println("[+] File sent: " + requestedFile); 
+                    } else { 
+                        dos.write("ERROR".getBytes()); 
+                    } 
+                } else { 
+                    dos.writeInt(0); 
+                } 
+            } 
+        } catch (IOException e) { 
+            System.err.println("[-] Error: " + e.getMessage()); 
+        } 
+    } 
+} 
+
+\\ ----------- FILE END -----------
+
+//UDP Server  
+ 
+import java.net.DatagramPacket; 
+import java.net.DatagramSocket; 
+ 
+public class ex24server { 
+    public static void main(String[] args) { 
+        int port = 12345; 
+        try { 
+            DatagramSocket socket = new DatagramSocket(port); 
+            System.out.println("UDP server started on port " + port + ". Waiting for messages..."); 
+ 
+            byte[] buffer = new byte[1024]; 
+            while (true) { 
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length); 
+                socket.receive(packet);  // Receive packet from client 
+                String receivedMsg = new String(packet.getData(), 0, packet.getLength()); 
+                String clientIP = packet.getAddress().getHostAddress(); 
+                int clientPort = packet.getPort(); 
+                System.out.println("Received message from " + clientIP + ":" + clientPort + " - " + 
+receivedMsg); 
+            } 
+        } catch (Exception e) { 
+            System.out.println("Error: " + e.getMessage()); 
+            e.printStackTrace(); 
+        } 
+    } 
+} 
+
+
+client code
+import java.net.DatagramPacket; 
+import java.net.DatagramSocket; 
+import java.net.InetAddress; 
+import java.util.Scanner; 
+ 
+public class ex24client { 
+    public static void main(String[] args) { 
+        Scanner scanner = new Scanner(System.in); 
+        System.out.print("Enter server IP address: "); 
+        String serverIP = scanner.nextLine(); 
+        int serverPort = 12345; 
+ 
+        try { 
+            DatagramSocket socket = new DatagramSocket(); 
+            System.out.println("Type your messages below. Type 'exit' to quit."); 
+            while (true) { 
+                System.out.print("You: "); 
+                String message = scanner.nextLine(); 
+                if (message.equalsIgnoreCase("exit")) { 
+                    break; 
+                } 
+                byte[] buffer = message.getBytes(); 
+                InetAddress serverAddress = InetAddress.getByName(serverIP); 
+ 
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, serverAddress, 
+serverPort); 
+                socket.send(packet); 
+            } 
+            socket.close(); 
+            System.out.println("Client exited."); 
+        } catch (Exception e) { 
+            System.out.println("Error: " + e.getMessage()); 
+            e.printStackTrace(); 
+        } 
+        scanner.close(); 
+    } 
+}
+
+
+\\ ----------- FILE END -----------
+
+//SERVER PROGRAM:   
+import java.net.*;  
+import java.util.Random;  
+ public class ex26server {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        Random rand = new Random();  
+        try {  
+            DatagramSocket socket = new DatagramSocket();  
+            System.out.println("Weather Server started... broadcasting every 5 seconds");  
+    while (true) {  
+                int temperature = rand.nextInt(15) + 15;     
+                int humidity = rand.nextInt(50) + 30;        
+String weatherUpdate = "Temperature: " + temperature + "C, Humidity: " + humidity + "%";  
+byte[] buffer = weatherUpdate.getBytes();  
+DatagramPacket packet = new DatagramPacket(  
+                        buffer, buffer.length,  
+                        InetAddress.getByName("127.0.0.1"), PORT);  
+socket.send(packet);  
+                System.out.println("Sent: " + weatherUpdate);  
+Thread.sleep(5000);   
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+//CLIENT PROGRAM:  
+import java.net.*;  
+public class ex26client {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        try {  
+            DatagramSocket socket = new DatagramSocket(PORT);  
+            byte[] buffer = new byte[1024];  
+            System.out.println("Weather Client started... waiting for updates");  
+while (true) {  
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);  
+                socket.receive(packet);  
+                String weatherUpdate = new String(packet.getData(), 0, packet.getLength());  
+                System.out.println("Received: " + weatherUpdate);  
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+\\ ----------- FILE END -----------
+
+//3.1
+
+//(ServiceImplementation.java)
+import java.rmi.RemoteException; 
+import java.rmi.server.UnicastRemoteObject; 
+public class ServiceImplementation extends UnicastRemoteObject implements ServiceInterface 
+{ 
+    protected ServiceImplementation() throws RemoteException { 
+        super(); 
+    } 
+    public double calculateCGPA(double[] grades) throws RemoteException { 
+        double total = 0; 
+        for(double g : grades) { 
+            total += g; 
+        } 
+        return total / grades.length; 
+     }
+    public double celsiusToFahrenheit(double celsius) throws RemoteException { 
+        return (celsius * 9/5) + 32; 
+    } 
+    public double calculate(String operation, double a, double b) throws RemoteException { 
+        switch (operation.toLowerCase()) { 
+            case "add": return a + b; 
+            case "sub": return a - b; 
+            case "mul": return a * b; 
+            case "div":  
+                if(b == 0) throw new ArithmeticException("Division by zero"); 
+                return a / b; 
+            default: throw new UnsupportedOperationException("Invalid operation"); 
+        } 
+    } 
+}
+
+
+//Server.java
+
+
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.registry.Registry; 
+public class Server { 
+    public static void main(String[] args) { 
+        try { 
+            // Create and export remote object 
+            ServiceImplementation service = new ServiceImplementation(); 
+            // Start RMI registry on port 1099 
+            Registry registry = LocateRegistry.createRegistry(1099); 
+            // Bind the remote object's stub in the registry 
+            registry.rebind("Service", service); 
+            System.out.println("Server is ready..."); 
+        } catch (Exception e) { 
+            System.out.println("Server exception: " + e.toString()); 
+            e.printStackTrace(); 
+        } 
+    } 
+}
+
+
+//Client.java
+
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.registry.Registry; 
+import java.util.Scanner; 
+public class Client { 
+    public static void main(String[] args) { 
+        try { 
+            Registry registry = LocateRegistry.getRegistry("localhost"); 
+            ServiceInterface stub = (ServiceInterface) registry.lookup("Service"); 
+            Scanner sc = new Scanner(System.in); 
+            while(true) { 
+                System.out.println("\nChoose a service:"); 
+                System.out.println("1. CGPA Calculation"); 
+                System.out.println("2. Celsius to Fahrenheit"); 
+                System.out.println("3. Simple Calculator"); 
+                System.out.println("4. Exit"); 
+                System.out.print("Enter choice: "); 
+                int choice = sc.nextInt(); 
+                if(choice == 4) { 
+                    System.out.println("Exiting..."); 
+                    break; 
+                } 
+                switch (choice) { 
+                    case 1: 
+                        System.out.print("Enter number of subjects: "); 
+                        int n = sc.nextInt(); 
+                        double[] grades = new double[n]; 
+                        for (int i = 0; i < n; i++) { 
+                            System.out.print("Enter grade for subject " + (i + 1) + ": "); 
+                            grades[i] = sc.nextDouble(); 
+                        } 
+                        double cgpa = stub.calculateCGPA(grades); 
+                        System.out.println("Calculated CGPA: " + cgpa); 
+                        break; 
+       case 2: 
+                        System.out.print("Enter temperature in Celsius: "); 
+                        double celsius = sc.nextDouble(); 
+                        double fahrenheit = stub.celsiusToFahrenheit(celsius); 
+                        System.out.println("Temperature in Fahrenheit: " + fahrenheit); 
+                        break; 
+                    case 3: 
+                        System.out.print("Enter operation (add, sub, mul, div): "); 
+                        String op = sc.next(); 
+                        System.out.print("Enter first number: "); 
+                        double a = sc.nextDouble(); 
+                        System.out.print("Enter second number: "); 
+                        double b = sc.nextDouble(); 
+                        try { 
+                            double result = stub.calculate(op, a, b); 
+                            System.out.println("Result: " + result); 
+                        } catch (Exception e) { 
+                            System.out.println("Error: " + e.getMessage()); 
+                        } 
+                        break; 
+                    default: 
+                        System.out.println("Invalid choice"); 
+                } 
+            } 
+            sc.close(); 
+        } catch (Exception e) { 
+            System.out.println("Client exception: " + e.toString()); 
+            e.printStackTrace(); 
+        } 
+    } 
+} 
+
+
+//ServiceInterface.java
+
+import java.rmi.Remote; 
+import java.rmi.RemoteException; 
+public interface ServiceInterface extends Remote { 
+    // CGPA calculation: takes an array of grades and returns CGPA 
+    double calculateCGPA(double[] grades) throws RemoteException; 
+ 
+    // Temperature conversion: Celsius to Fahrenheit 
+    double celsiusToFahrenheit(double celsius) throws RemoteException; 
+    // Simple calculator: operation could be "add", "sub", "mul", "div" 
+    double calculate(String operation, double a, double b) throws RemoteException; 
+}
+
+\\ ----------- FILE END -----------
+
+//2.5 server
+import java.net.*;  
+import java.io.*;  
+import java.text.SimpleDateFormat;  
+import java.util.*;  
+ public class ex25s {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+        String[] questions = {  
+            "What is the capital of France?",  
+            "2 + 2 = ?",  
+            "Which planet is known as the Red Planet?"  
+        };  
+   
+try {  
+            DatagramSocket socket = new DatagramSocket();  
+            socket.setBroadcast(true);  
+            System.out.println("Quiz Server started...");  
+            for (String q : questions) {  
+                byte[] buffer = q.getBytes();  
+                DatagramPacket packet = new DatagramPacket(  
+                    buffer, buffer.length,  
+                    InetAddress.getByName("255.255.255.255"), PORT  
+                );  
+                socket.send(packet);  
+                System.out.println("\nBroadcasted Question: " + q);
+                long start = System.currentTimeMillis();  
+                socket.setSoTimeout(10000);  
+                while (System.currentTimeMillis() - start < 10000) {  
+                    try {  
+                        byte[] receiveBuffer = new byte[1024];  
+                        DatagramPacket response = new DatagramPacket(receiveBuffer, 
+receiveBuffer.length);  
+                        socket.receive(response);  
+                        String answer = new String(response.getData(), 0, response.getLength());  
+                       String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());  
+                       System.out.println("[" + timeStamp + "] From "   
+                            + response.getAddress().getHostAddress() + ": " + answer);  
+   
+                    } catch (SocketTimeoutException e) {  
+                        System.out.println("Time over for this question!");  
+                        break;  
+                    }  
+                }  
+            }  
+   
+            socket.close();  
+            System.out.println("\nQuiz ended. Server shutting down.");  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+//2.5 client code
+import java.net.*;  
+import java.io.*;  
+import java.util.Scanner;  
+   
+public class ex25c {  
+    public static void main(String[] args) {  
+        final int PORT = 12345;  
+   
+        try {  
+            DatagramSocket socket = new DatagramSocket(PORT);  
+            byte[] buffer = new byte[1024];  
+            Scanner sc = new Scanner(System.in);  
+            System.out.println("Quiz Client started... Waiting for questions...");  
+            while (true) {  
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);  
+                socket.receive(packet);  
+                String question = new String(packet.getData(), 0, packet.getLength());  
+                System.out.println("\nQuestion: " + question);  
+                System.out.print("Your Answer: ");  
+                String answer = sc.nextLine();  
+                byte[] ansData = answer.getBytes();  
+                DatagramPacket ansPacket = new DatagramPacket(  
+                    ansData, ansData.length, packet.getAddress(), packet.getPort()  
+                );  
+                socket.send(ansPacket);  
+            }  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+} 
+
+
+\\ ----------- FILE END -----------
+
