@@ -1,39 +1,29 @@
 How To Use:
-Open the CMD, use curl to fetch the code.
-
-For example, to fetch the ex 2.2's code you should use:
-curl  https://mac20028.github.io/ex2.1client.txt
-curl https://mac20028.github.io/ex2.2server.txt
-Because the ex has two parts.
-
-If you want all code, use:
-curl https://mac20028.github.io/allcode.txt
+Just copy and paste the command given.
 
 Ex 1.1
-  https://mac20028.github.io/ex%201.1.txt
+  curl https://mac20028.github.io/ex%201.1.txt -o Ex1.java
 
 Ex 2.1 
-  Client - https://mac20028.github.io/ex2.1client.txt
-  Server - https://mac20028.github.io/ex2.1server.txt
+  curl https://mac20028.github.io/ex2.1client.txt -o Ex21Client.java https://mac20028.github.io/ex2.1server.txt -o Ex21Server.java
 
 Ex 2.2
-  Client - https://mac20028.github.io/ex2.2client.txt
-  Server - https://mac20028.github.io/ex2.2server.txt
+  curl https://mac20028.github.io/ex2.2client.txt -o Ex22Client.java https://mac20028.github.io/ex2.2server.txt -o Ex22server.java
 
 Ex 2.3
-  https://mac20028.github.io/2.3completecode.txt
+  curl https://mac20028.github.io/2.3completecode.txt -o Ex23.java
 
 Ex 2.4
-  https://mac20028.github.io/ex2.4.txt
+  curl https://mac20028.github.io/ex2.4.txt -o Ex24.java
 
 Ex 2.5
-  https://mac20028.github.io/ex25complecode.txt
+  curl https://mac20028.github.io/ex25complecode.txt -o Ex25.java
 
 Ex 2.6
-  https://mac20028.github.io/ex2.6.txt
+  curl https://mac20028.github.io/ex2.6.txt -o Ex26.java
 
 Ex 3.1
-  https://mac20028.github.io/ex3.1.txt
+  curl https://mac20028.github.io/ex3.1.txt -o Ex31.java
 
 All Code
-  https://mac20028.github.io/allcode.txt
+  curl https://mac20028.github.io/allcode.txt -o AllCode.java
