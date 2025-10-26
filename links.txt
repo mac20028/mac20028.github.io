@@ -1,3 +1,14 @@
+How To Use:
+Open the CMD, use curl to fetch the code.
+
+For example, to fetch the ex 2.2's code you should use:
+curl  https://mac20028.github.io/ex2.1client.txt
+curl https://mac20028.github.io/ex2.2server.txt
+Because the ex has two parts.
+
+If you want all code, use:
+curl https://mac20028.github.io/allcode.txt
+
 Ex 1.1
   https://mac20028.github.io/ex%201.1.txt
 
