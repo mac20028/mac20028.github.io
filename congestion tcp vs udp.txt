@@ -1,0 +1,96 @@
+# 6-node Network Simulation (TCP vs UDP Performance under Congestion) 
+ 
+# Create a simulator object 
+set ns [new Simulator] 
+ 
+# Open trace files 
+set tracefile [open tcp_udp_congestion.tr w] 
+set namfile [open tcp_udp_congestion.nam w] 
+$ns trace-all $tracefile 
+$ns namtrace-all $namfile 
+ 
+# Define 'finish' procedure 
+proc finish {} { 
+    global ns tracefile namfile 
+    $ns flush-trace 
+    close $tracefile 
+    close $namfile 
+    exec nam tcp_udp_congestion.nam & 
+    exit 0 
+} 
+ 
+# Create 6 nodes 
+set n0 [$ns node]   ;# A 
+set n1 [$ns node]   ;# B 
+set n2 [$ns node]   ;# C 
+set n3 [$ns node]   ;# D 
+set n4 [$ns node]   ;# E 
+set n5 [$ns node]   ;# F 
+ 
+# Create duplex links (2Mbps, 10ms) 
+$ns duplex-link $n0 $n1 2Mb 10ms DropTail 
+$ns duplex-link $n0 $n2 2Mb 10ms DropTail 
+$ns duplex-link $n0 $n3 2Mb 10ms DropTail 
+$ns duplex-link $n1 $n3 2Mb 10ms DropTail 
+$ns duplex-link $n2 $n4 2Mb 10ms DropTail 
+$ns duplex-link $n3 $n4 2Mb 10ms DropTail 
+$ns duplex-link $n3 $n5 2Mb 10ms DropTail 
+$ns duplex-link $n4 $n5 2Mb 10ms DropTail 
+ 
+# Set queue size 
+$ns queue-limit $n0 $n3 20 
+$ns queue-limit $n1 $n3 20 
+$ns queue-limit $n3 $n4 20 
+$ns queue-limit $n3 $n5 20 
+ 
+# TCP Connection (B → E) 
+ 
+set tcp [new Agent/TCP] 
+$tcp set class_ 2 
+$ns attach-agent $n1 $tcp 
+ 
+set sink [new Agent/TCPSink] 
+$ns attach-agent $n4 $sink 
+ 
+$ns connect $tcp $sink 
+ 
+# TCP traffic generator 
+set ftp [new Application/FTP] 
+$ftp attach-agent $tcp 
+$ftp set type_ FTP 
+ 
+# UDP Connection (A → F) 
+ 
+set udp [new Agent/UDP] 
+$ns attach-agent $n0 $udp 
+ 
+set null [new Agent/Null] 
+$ns attach-agent $n5 $null 
+ 
+$ns connect $udp $null 
+ 
+# CBR (Constant Bit Rate) traffic over UDP 
+set cbr [new Application/Traffic/CBR] 
+$cbr attach-agent $udp 
+$cbr set rate_ 1Mb; 
+# Start with 1Mbps 
+$cbr set packetSize_ 1000 
+ 
+# Simulation Timing 
+ 
+$ns at 0.01 "$ftp start" 
+$ns at 0.01 "$cbr start" 
+ 
+# Gradually increase UDP rate to cause congestion 
+$ns at 1.0  "$cbr set rate_ 1.5Mb" 
+$ns at 2.0  "$cbr set rate_ 2Mb" 
+$ns at 3.0  "$cbr set rate_ 3Mb" 
+$ns at 4.0  "$cbr set rate_ 4Mb" 
+ 
+# Stop traffic 
+$ns at 5.0 "$ftp stop" 
+$ns at 5.0 "$cbr stop" 
+$ns at 5.1 "finish" 
+ 
+# Run the simulation 
+$ns run 

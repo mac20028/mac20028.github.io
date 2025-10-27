@@ -1,0 +1,78 @@
+# Exercise 6.3 – Mesh Topology Configuration using NS-2 
+ 
+# Create simulator object 
+set ns [new Simulator] 
+ 
+# Open trace files 
+set tracef [open ex6_3.tr w] 
+set namf [open ex6_3.nam w] 
+ 
+$ns trace-all $tracef 
+$ns namtrace-all $namf 
+ 
+# Define colors for flows 
+$ns color 1 Yellow 
+$ns color 2 Green 
+ 
+# Create nodes (6 nodes: 0 to 5) 
+for {set i 0} {$i < 6} {incr i} { 
+    set n($i) [$ns node] 
+} 
+ 
+# Define link parameters 
+set bw 5Mb 
+set delay 15ms 
+set qtype DropTail 
+# Create full mesh topology (every node connected to every other node) 
+for {set i 0} {$i < 6} {incr i} { 
+    for {set j [expr {$i + 1}]} {$j < 6} {incr j} { 
+        $ns duplex-link $n($i) $n($j) $bw $delay $qtype 
+    } 
+} 
+ 
+# Define a procedure to create UDP flows 
+proc create_udp_flow {ns src dst pkt_size pkt_per_sec start_time stop_time flow_id} { 
+    # Calculate rate in bits per second 
+    set rate_bps [expr {$pkt_per_sec * $pkt_size * 8}] 
+    # Create UDP agent and sink 
+    set udp [new Agent/UDP] 
+    $udp set fid_ $flow_id 
+    set null [new Agent/Null] 
+    $ns attach-agent $src $udp 
+    $ns attach-agent $dst $null 
+    $ns connect $udp $null 
+    # Create CBR traffic (Constant Bit Rate) 
+    set cbr [new Application/Traffic/CBR] 
+    $cbr set packetSize_ $pkt_size 
+    $cbr set rate_ $rate_bps 
+    $cbr attach-agent $udp 
+    # Schedule start/stop 
+    $ns at $start_time "$cbr start" 
+    $ns at $stop_time "$cbr stop" 
+} 
+ 
+# Simulation parameters 
+set pkt_size 1000 
+set pkt_rate 1000 
+set tstart 0.01 
+set tstop 5.0 
+# Create UDP Flows 
+# Flow 1: Node 2 → Node 4 
+create_udp_flow $ns $n(2) $n(4) $pkt_size $pkt_rate $tstart $tstop 1 
+# Flow 2: Node 1 → Node 5 
+create_udp_flow $ns $n(1) $n(5) $pkt_size $pkt_rate $tstart $tstop 2 
+# Finish procedure 
+ 
+proc finish {} { 
+    global ns tracef namf 
+    $ns flush-trace 
+    close $tracef 
+    close $namf 
+    exec nam ex6_3.nam & 
+    exit 0 
+} 
+# Schedule finish 
+$ns at 6.0 "finish" 
+ 
+# Run simulation 
+$ns run

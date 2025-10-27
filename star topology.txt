@@ -1,0 +1,83 @@
+# Network Topology Configuration using NS-2 
+# Star topology with 5 nodes (0–4) 
+ 
+# Create simulator object 
+set ns [new Simulator] 
+ 
+# Open trace files 
+set tracef [open ex6_1.tr w] 
+set namf [open ex6_1.nam w] 
+ 
+$ns trace-all $tracef 
+$ns namtrace-all $namf 
+ 
+# Define color codes for flows 
+$ns color 1 Blue 
+$ns color 2 Red 
+ 
+# Create nodes 
+for {set i 0} {$i < 5} {incr i} { 
+    set n($i) [$ns node] 
+} 
+ 
+# Link parameters 
+set bw 2Mb 
+set delay 10ms 
+set qtype DropTail 
+ 
+# Create star topology (node 0 as central node) 
+for {set i 1} {$i < 5} {incr i} { 
+    $ns duplex-link $n(0) $n($i) $bw $delay $qtype 
+} 
+ 
+# Define a procedure to create TCP flows 
+proc create_tcp_flow {ns src dst pkt_size pkt_per_sec start_time stop_time flow_id} { 
+    # Calculate rate in bits per second 
+    set rate_bps [expr {$pkt_per_sec * $pkt_size * 8}] 
+ 
+    # Create TCP agent and sink 
+    set tcp [new Agent/TCP] 
+    $tcp set fid_ $flow_id 
+    set sink [new Agent/TCPSink] 
+ 
+    $ns attach-agent $src $tcp 
+    $ns attach-agent $dst $sink 
+    $ns connect $tcp $sink 
+ 
+    # Create application traffic (Exponential) 
+    set app [new Application/Traffic/Exponential] 
+    $app set packetSize_ $pkt_size 
+    $app set rate_ $rate_bps 
+    $app attach-agent $tcp 
+ 
+    # Schedule start/stop 
+    $ns at $start_time "$app start" 
+    $ns at $stop_time "$app stop" 
+} 
+ 
+# Simulation parameters 
+set pkt_size 1000 
+set pkt_rate 1000 
+set tstart 0.01 
+set tstop 15.0 
+ 
+# TCP Flow 1: Node 2 → Node 4 
+create_tcp_flow $ns $n(2) $n(4) $pkt_size $pkt_rate $tstart $tstop 1 
+ 
+# TCP Flow 2: Node 1 → Node 3 
+create_tcp_flow $ns $n(1) $n(3) $pkt_size $pkt_rate $tstart $tstop 2 
+ 
+# Finish procedureproc finish {} { 
+    global ns tracef namf 
+    $ns flush-trace 
+    close $tracef 
+    close $namf 
+    exec nam ex6_1.nam & 
+    exit 0 
+} 
+ 
+# Schedule finish 
+$ns at 16.0 "finish" 
+ 
+# Run simulation 
+$ns run

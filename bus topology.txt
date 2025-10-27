@@ -1,0 +1,78 @@
+# bus_final.tcl 
+# 5-node Bus Topology Simulation 
+# Link: 12Mbps, 10ms 
+# TCP traffic from node 2 to node 3 
+# Simulation time: 0.01s to 5.000s 
+ 
+# Create simulator object 
+set ns [new Simulator] 
+ 
+# Trace and NAM setup 
+set nf [open bus.nam w] 
+$ns namtrace-all $nf 
+ 
+# Define finish procedure 
+proc finish {} { 
+    global ns nf 
+    $ns flush-trace 
+    close $nf 
+    puts "Simulation completed successfully!" 
+    puts "Run 'nam bus.nam &' to visualize." 
+    exec nam bus.nam & 
+    exit 0 
+} 
+ 
+# Create 5 nodes 
+for {set i 0} {$i < 5} {incr i} { 
+    set n($i) [$ns node] 
+} 
+ 
+# Create bus-like links 
+$ns duplex-link $n(0) $n(1) 12Mb 10ms DropTail 
+$ns duplex-link $n(1) $n(2) 12Mb 10ms DropTail 
+$ns duplex-link $n(2) $n(3) 12Mb 10ms DropTail 
+$ns duplex-link $n(3) $n(4) 12Mb 10ms DropTail 
+ 
+# Layout in NAM (bus appearance) 
+$ns duplex-link-op $n(0) $n(1) orient right 
+$ns duplex-link-op $n(1) $n(2) orient right 
+$ns duplex-link-op $n(2) $n(3) orient right 
+$ns duplex-link-op $n(3) $n(4) orient right 
+ 
+# Color nodes for clarity 
+$n(0) color blue 
+$n(1) color blue 
+$n(2) color red    ;# sender 
+$n(3) color green  ;# receiver 
+$n(4) color blue 
+ 
+# TCP Agent setup 
+set tcp [new Agent/TCP] 
+$tcp set class_ 2 
+$ns attach-agent $n(2) $tcp 
+ 
+# TCP sink (receiver) 
+set sink [new Agent/TCPSink] 
+$ns attach-agent $n(3) $sink 
+$ns connect $tcp $sink 
+ 
+# FTP application (for TCP) 
+set ftp [new Application/FTP] 
+$ftp attach-agent $tcp 
+ 
+# Schedule simulation 
+$ns at 0.01 "$ftp start" 
+$ns at 5.000 "$ftp stop" 
+$ns at 5.5 "finish" 
+ 
+# Display info 
+puts "===========================================" 
+puts "Bus Topology Simulation Started" 
+puts "Nodes: 0 1 2 3 4" 
+puts "Link: 12 Mbps | Delay: 10 ms" 
+puts "TCP (FTP) from Node 2 → Node 3" 
+puts "Start: 0.01s | Stop: 5.000s" 
+puts "===========================================" 
+ 
+# Run simulation 
+$ns run
