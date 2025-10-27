@@ -1,0 +1,79 @@
+% family.pl
+:- module(family, [parent/2, male/1, female/1, friend/2, parents_of/2, sibling/2]).
+
+% Facts
+parent(prem, priya).
+parent(prem, raj).
+parent(suba, priya).
+parent(suba, raj).
+
+male(prem).
+male(raj).
+female(suba).
+female(priya).
+female(sophie).
+
+friend(sophie, priya).
+friend(sophie, raj).
+
+% Derived rules:
+parents_of(X, [P1,P2]) :-
+    parent(P1, X),
+    parent(P2, X),
+    P1 \= P2.
+
+sibling(X, Y) :-
+    parent(P, X),
+    parent(P, Y),
+    X \= Y.
+
+% Example queries:
+% 1. Find Priya's parents:
+%    ?- parent(P, priya).
+% 2. Check if Priya and Raj are siblings:
+%    ?- sibling(priya, raj).
+% 3. Find Raj's friends:
+%    ?- friend(F, raj).
+% 4. Verify if Suba is female:
+%    ?- female(suba).
+
+
+example queries:
+% family.pl
+:- module(family, [parent/2, male/1, female/1, friend/2, parents_of/2, sibling/2]).
+
+% Facts
+parent(prem, priya).
+parent(prem, raj).
+parent(suba, priya).
+parent(suba, raj).
+
+male(prem).
+male(raj).
+female(suba).
+female(priya).
+female(sophie).
+
+friend(sophie, priya).
+friend(sophie, raj).
+
+% Derived rules:
+parents_of(X, [P1,P2]) :-
+    parent(P1, X),
+    parent(P2, X),
+    P1 \= P2.
+
+sibling(X, Y) :-
+    parent(P, X),
+    parent(P, Y),
+    X \= Y.
+
+% Example queries:
+% 1. Find Priya's parents:
+%    ?- parent(P, priya).
+% 2. Check if Priya and Raj are siblings:
+%    ?- sibling(priya, raj).
+% 3. Find Raj's friends:
+%    ?- friend(F, raj).
+% 4. Verify if Suba is female:
+%    ?- female(suba).

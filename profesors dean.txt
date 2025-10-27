@@ -1,0 +1,46 @@
+% critique.pl
+:- module(critique, [professor/1, person/1, dean/1, friend/2, criticizes/2]).
+
+% Facts:
+professor(lucy).
+person(lucy).
+dean(john).
+person(john).
+
+% Deans are professors, John is dean (already declared dean above)
+% so also professor(john). We'll assert that:
+professor(john).
+
+% Rule: All professors are people.
+person(X) :- professor(X).
+
+% Rule: All professors consider the dean a friend OR don't know him.
+% (We encode as: professor(X) implies either friend(X, Dean) or unknown(X, Dean).
+% For simplicity we'll assert the disjunction is not deterministic; we only know it's possible.
+
+% We'll model "everyone is a friend of someone" as an existential fact.
+% To keep it safe we'll add a fact: friend(lucy, someone) (to satisfy constraint)
+% but whether lucy is friend with john is not forced by premises.
+friend(X, Y) :- professor(X), dean(Y), friend_prof_dean(X, Y).
+% We'll not provide friend_prof_dean facts, so friend(lucy,john) is not provable from given facts.
+
+% Everyone is a friend of someone (generic existential)
+friend(lucy, mark).   % a concrete friend to satisfy "everyone is a friend of someone".
+person(mark).
+
+% People only criticize people that are not their friends.
+criticizes(A,B) :-
+    person(A),
+    person(B),
+    \+ friend(A,B),
+    A \= B.
+
+% With given info we can check whether Lucy criticizes John:
+
+
+% Query: ?- criticizes(lucy, john).
+% Because friend(lucy,john) is not given and not derivable, and both are persons,
+% criticizes(lucy,john) will succeed under closed-world assumption.
+
+% Note: this encoding depends on the closed-world assumption: if friend(lucy,john) is not asserted,
+% it's assumed false and thus criticizes(lucy,john) becomes provable.

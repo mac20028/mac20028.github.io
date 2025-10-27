@@ -1,0 +1,39 @@
+% family2.pl
+:- module(family2, [male/1, female/1, parent/2, mother/2, father/2, sibling/2]).
+
+% Facts:
+male(john).
+male(paul).
+male(george).
+
+female(susan).
+female(mary).
+female(linda).
+female(kate).
+
+parent(john, mary).
+parent(john, paul).
+parent(susan, mary).
+parent(susan, paul).
+parent(paul, linda).
+parent(paul, george).
+parent(linda, kate).
+
+% Derived:
+mother(M, C) :- parent(M, C), female(M).
+father(F, C) :- parent(F, C), male(F).
+
+sibling(X, Y) :-
+    parent(P, X),
+    parent(P, Y),
+    X \= Y.
+
+% Queries:
+% Who is the mother of Mary?
+%   ?- mother(M, mary).
+% Who is the father of George?
+%   ?- father(F, george).
+% Is John and Susan siblings?
+%   ?- sibling(john, susan).
+% Is Mary and Paul siblings?
+%   ?- sibling(mary, paul).

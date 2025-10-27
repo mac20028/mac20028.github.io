@@ -1,0 +1,40 @@
+def a_star_simple(graph, start, goal, h):
+    open_set = [(start, 0, [start])]  # (node, cost_so_far, path)
+    visited = set()
+
+    while open_set:
+        # Pick the node with smallest f = g + h
+        open_set.sort(key=lambda x: x[1] + h(x[0]))
+        current, cost_so_far, path = open_set.pop(0)
+
+        if current == goal:
+            return path, cost_so_far
+
+        if current in visited:
+            continue
+
+        visited.add(current)
+
+        for neighbor, cost in graph.get(current, []):
+            if neighbor not in visited:
+                open_set.append((neighbor, cost_so_far + cost, path + [neighbor]))
+
+    return None, float('inf')
+
+# Define the graph
+graph = {
+    'A': [('B', 1), ('C', 4)],
+    'B': [('A', 1), ('C', 2), ('D', 5)],
+    'C': [('A', 4), ('B', 2), ('D', 1)],
+    'D': [('B', 5), ('C', 1)],
+}
+
+# Define the heuristic function
+def heuristic(node):
+    h_values = {'A': 7, 'B': 6, 'C': 2, 'D': 0}
+    return h_values.get(node, float('inf'))
+
+# Run the A* algorithm
+path, cost = a_star_simple(graph, 'A', 'D', heuristic)
+print("Path:", path)
+print("Cost:", cost)

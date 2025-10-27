@@ -1,0 +1,28 @@
+% food_meal.pl
+:- module(food_meal, [food/1, meal/1, breakfast/1, lunch/1, dinner/1]).
+
+% Facts:
+breakfast(idly).
+breakfast(dosa).
+dinner(chappathi).
+lunch(briyani).
+
+food(idly).
+food(dosa).
+food(chappathi).
+food(briyani).
+
+% Rule: every food is a meal
+meal(X) :- food(X).
+
+% Queries:
+% Is Pizza a food?
+%   ?- food(pizza).        % expected: false (unless you add fact)
+% Is Idly a food?
+%   ?- food(idly).         % expected: true
+% Which food is meal and lunch?
+%   ?- meal(X), lunch(X).  % expected: X = briyani.
+% Is Dosa a dinner?
+%   ?- dinner(dosa).       % expected: false
+% Is Idly a breakfast?
+%   ?- breakfast(idly).    % expected: true

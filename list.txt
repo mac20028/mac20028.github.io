@@ -1,0 +1,42 @@
+How To Use:
+Just copy and paste the command given.
+
+
+Astar.txt 
+  curl https://mac20028.github.io/Astar.txt  -o Astar.py 
+
+BFS.txt 
+  curl https://mac20028.github.io/BFS.txt  -o BFS.py 
+
+carownership.txt 
+  curl https://mac20028.github.io/carownership.txt  -o carownership.py 
+
+DFS.txt 
+  curl https://mac20028.github.io/DFS.txt  -o DFS.py 
+
+family siblings.txt 
+  curl https://mac20028.github.io/family%20siblings.txt  -o  family siblings.py 
+
+foodmeal.txt 
+  curl https://mac20028.github.io/foodmeal.txt  -o foodmeal.py 
+
+monkey and banana.txt 
+  curl https://mac20028.github.io/monkey%20and%20banana.txt  -o monkey_and_banana.py 
+
+motherfathersiblings.txt 
+  curl https://mac20028.github.io/motherfathersiblings.txt  -o motherfathersiblings.py 
+
+NQUEEN.txt 
+  curl https://mac20028.github.io/NQUEEN.txt  -o NQUEEN.py 
+
+profesors dean.txt 
+  curl https://mac20028.github.io/profesors%20dean.txt  -o  profesors_dean.pl 
+
+prolog.txt 
+  curl https://mac20028.github.io/prolog.txt  -o prolog.pl 
+
+student placement.txt 
+  curl https://mac20028.github.io/student%20placement.txt  -o  student_placement.pl 
+
+water jugs.
+  curl https://mac20028.github.io/water%20jugs.txt -o water_jugs.pl

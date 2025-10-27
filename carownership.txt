@@ -1,0 +1,24 @@
+% cars.pl
+:- module(cars, [owns/2, car_type/2]).
+
+% Facts
+owns(muhil, bmw).
+owns(meera, chevy).
+owns(arun, civic).
+owns(hari, chevy).
+
+car_type(bmw, sedan).
+car_type(civic, sedan).
+car_type(chevy, truck).
+
+% Queries:
+% What does Muhil own?
+%   ?- owns(muhil, Car).
+% Does Meera own something?
+%   ?- owns(meera, X).
+% Who owns car Chevy?
+%   ?- owns(Who, chevy).
+% Does Arun own a sedan?
+%   ?- owns(arun, Car), car_type(Car, sedan).
+% Does Hari own a truck?
+%   ?- owns(hari, Car), car_type(Car, truck).

@@ -1,0 +1,60 @@
+% placement.pl
+:- module(placement, [student/1, skill/2, company_requires/2, placed/2, preparing/1]).
+
+% Students
+student(sofi).
+student(antony).
+student(raj).
+
+% Skills: skill(Student, Skill)
+skill(sofi, python).
+skill(sofi, machine_learning).
+skill(antony, java).
+skill(antony, data_structures).
+skill(raj, cpp).
+skill(raj, databases).
+
+% Companies and required skills
+company(google).
+company(microsoft).
+company(amazon).
+
+company_requires(google, python).
+company_requires(google, machine_learning).
+company_requires(microsoft, java).
+company_requires(microsoft, data_structures).
+company_requires(amazon, cpp).
+company_requires(amazon, databases).
+
+% Placement status
+placed(sofi, google).
+placed(antony, microsoft).
+preparing(raj).
+
+% Queries you can run:
+% 1. Who are still preparing?
+%    ?- preparing(X).
+% 2. Which students have Python skills?
+%    ?- skill(X, python).
+% 3. Which company hired Antony?
+%    ?- placed(antony, Company).
+% 4. Which companies are looking for Java-skilled candidates?
+%    ?- company_requires(Company, java).
+% 5. Is Sofi placed?
+%    ?- placed(sofi, Company).
+
+example queries:
+?- preparing(X).
+% X = raj.
+
+?- skill(X, python).
+% X = sofi.
+
+?- placed(antony, C).
+% C = microsoft.
+
+?- company_requires(C, java).
+% C = microsoft.
+
+?- placed(sofi, Co).
+% Co = google.

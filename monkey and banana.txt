@@ -1,0 +1,57 @@
+% monkey_bananas.pl
+:- module(monkey_bananas, [plan/3, initial_state/1, goal/1]).
+
+% Action representation: action(Name, Preconditions, AddList, DelList).
+
+action(push_block_to_under_banana,
+       [at(monkey, floor), at(block, window), reachable_from(monkey, block)],
+       [at(block, under_banana)],
+       [at(block, window)]).
+
+action(climb_on_block,
+       [at(monkey, floor), at(block, under_banana)],
+       [on(monkey, block)],
+       [at(monkey, floor)]).
+
+action(grab_banana,
+       [on(monkey, block), at(banana, ceiling_center)],
+       [has(monkey,banana)],
+       []).
+
+% extra helper to allow monkey to be "near" block (simple fact)
+% We'll represent reachability as a fact in the initial state.
+
+initial_state([ at(monkey, floor),
+                at(banana, ceiling_center),
+                at(block, window),
+                at(door, near),
+                reachable_from(monkey, block) ]).
+
+goal( State ) :- member(has(monkey,banana), State).
+
+% apply_action(+State, +Action, -NewState)
+apply_action(State, action(Name, Pre, Add, Del), NewState) :-
+    % check preconditions present
+    forall(member(P, Pre), member(P, State)),
+    % remove Del and add Add (avoid duplicates)
+    subtract(State, Del, Temp),
+    union(Temp, Add, NewState0),
+    sort(NewState0, NewState). % keep canonical order
+
+% wrapper to find action structure by name
+action_struct(Name, action(Name, Pre, Add, Del)) :-
+    action(Name, Pre, Add, Del).
+
+% depth-limited planner: plan(+State, +MaxDepth, -Plan)
+plan(State, _, []) :-
+    goal(State).
+plan(State, DepthLeft, [ActName | RestPlan]) :-
+    DepthLeft > 0,
+    action_struct(ActName, Act),
+    apply_action(State, Act, NewState),
+    D2 is DepthLeft - 1,
+    plan(NewState, D2, RestPlan).
+
+example queries:
+?- initial_state(S), plan(S, 5, Plan).
+% Expected Plan (one possible): [push_block_to_under_banana, climb_on_block, grab_banana]

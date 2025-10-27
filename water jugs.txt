@@ -1,0 +1,42 @@
+% jugs.pl
+:- module(jugs, [solve_jugs/1]).
+
+% actions:
+% fill4, fill3, empty4, empty3, pour4to3, pour3to4
+
+action(fill4, s(_,B), s(4,B)).
+action(fill3, s(A,_), s(A,3)).
+action(empty4, s(_,B), s(0,B)).
+action(empty3, s(A,_), s(A,0)).
+action(pour4to3, s(A,B), s(A2,B2)) :-
+    Space is 3 - B,
+    Transfer is min(A, Space),
+    A2 is A - Transfer,
+    B2 is B + Transfer.
+action(pour3to4, s(A,B), s(A2,B2)) :-
+    Space is 4 - A,
+    Transfer is min(B, Space),
+    A2 is A + Transfer,
+    B2 is B - Transfer.
+
+% search (depth-limited) produce Plans as list of action names
+solve_jugs(Plan) :-
+    Start = s(0,0),
+    Goal = s(2,_),          % want 2 in the 4-gallon jug (second jug can be anything)
+    depth_search(Start, Goal, 10, [], Plan).
+
+depth_search(State, Goal, _, _, []) :-
+    State = Goal.
+depth_search(State, Goal, MaxDepth, Visited, [ActName | Rest]) :-
+    MaxDepth > 0,
+    action(ActName, State, NextState),
+    \+ member(NextState, Visited),
+    MaxDepth1 is MaxDepth - 1,
+    depth_search(NextState, Goal, MaxDepth1, [NextState|Visited], Rest).
+
+
+
+example queries:
+?- solve_jugs(Plan).
+% One expected Plan (one of several):
+% Plan = [fill3, pour3to4, fill3, pour3to4, empty4, pour3to4]  % results in s(2,_)

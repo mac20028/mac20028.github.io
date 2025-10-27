@@ -1,0 +1,121 @@
+% monkey_banana(State, Actions) - solve the problem starting from State, producing Actions list 
+ 
+% State = state(MonkeyAt, BoxAt, MonkeyOnBox, BananaGrabbed) 
+% Locations: door, window, middle 
+ 
+% Goal: BananaGrabbed = true 
+ 
+% Initial state 
+initial_state(state(door, window, false, false)). 
+ 
+% Goal check 
+goal(state(_, _, _, true)). 
+ 
+% Actions: 
+% move_monkey(CurrentState, NewState, Action) 
+move_monkey(state(Monkey, Box, false, Banana), state(NewMonkey, Box, false, Banana), 
+move_monkey(NewMonkey)) :- 
+    Monkey \= NewMonkey, 
+    member(NewMonkey, [door, window, middle]). 
+ 
+% push_box(CurrentState, NewState, Action) 
+push_box(state(Pos, Pos, false, Banana), state(PosNew, PosNew, false, Banana), push_box(PosNew)) :- 
+    member(PosNew, [door, window, middle]), 
+    PosNew \= Pos. 
+ 
+% climb_box(CurrentState, NewState, Action) 
+climb_box(state(Pos, Pos, false, Banana), state(Pos, Pos, true, Banana), climb_box). 
+ 
+% grab_banana(CurrentState, NewState, Action) 
+grab_banana(state(middle, middle, true, false), state(middle, middle, true, true), grab_banana). 
+ 
+% Solve predicate - depth-first search 
+solve(State, []) :- 
+    goal(State). 
+ 
+solve(State, [Action | Rest]) :- 
+    ( move_monkey(State, NextState, Action) 
+    ; push_box(State, NextState, Action) 
+    ; climb_box(State, NextState, Action) 
+    ; grab_banana(State, NextState, Action) 
+    ), 
+    \+ member(NextState, Rest),  % Avoid loops by checking Rest 
+    solve(NextState, Rest). 
+ 
+% Query example: 
+% ?- initial_state(S), solve(S, Actions). 
+%  ?- goal(state(middle, middle, true, true)). 
+% ?- initial_state(S), solve(S, Actions).
+
+
+
+
+
+% factorial( N, Result ) 
+factorial(0, 1).  % base case 
+factorial(N, Result) :- 
+    N > 0, 
+    N1 is N - 1, 
+    factorial(N1, R1), 
+    Result is N * R1. 
+ 
+% fibonacci( N, Result ) 
+fibonacci(0, 0).  % base cases 
+fibonacci(1, 1). 
+fibonacci(N, Result) :- 
+    N > 1, 
+    N1 is N - 1, 
+    N2 is N - 2, 
+    fibonacci(N1, R1), 
+    fibonacci(N2, R2), 
+    Result is R1 + R2. 
+ 
+% Example queries for factorial: 
+% ?- factorial(5, Result). 
+% ?- factorial(0, Result). 
+ 
+% Example queries for fibonacci: 
+% ?- fibonacci(7, Result). 
+% ?- fibonacci(0, R0), fibonacci(1, R1). 
+% ?- fibonacci(10, Result). 
+
+
+
+% Facts: father(Child, Father) 
+father(john, michael). 
+father(michael, robert). 
+father(david, michael). 
+ 
+% Facts: mother(Child, Mother) 
+mother(john, sarah). 
+mother(michael, linda). 
+mother(david, sarah). 
+ 
+% parents(Child, Father, Mother) 
+parents(Child, Father, Mother) :- 
+    father(Child, Father), 
+    mother(Child, Mother). 
+ 
+% is_father(X, Y) - X is father of Y 
+is_father(X, Y) :- father(Y, X). 
+ 
+% is_mother(X, Y) - X is mother of Y 
+is_mother(X, Y) :- mother(Y, X). 
+ 
+% is_sibling(X, Y) - X and Y share at least one parent, X \= Y 
+is_sibling(X, Y) :- 
+    X \= Y, 
+    (father(X, Dad), father(Y, Dad); 
+     mother(X, Mom), mother(Y, Mom)). 
+ 
+% is_uncle(X, Y) - X is sibling of Y's father or mother 
+is_uncle(X, Y) :- 
+    parents(Y, Dad, Mom), 
+    (is_sibling(X, Dad); is_sibling(X, Mom)), 
+    % Assuming X is male (we can assume father keys are male as per your code) 
+    father(_, X). 
+ 
+% Queries (example) 
+% ?- is_father(michael, john). 
+% ?- is_sibling(john, david). 
+% ?- is_uncle(john, robert). 
