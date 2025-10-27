@@ -27,3 +27,23 @@ Ex 3.1
 
 All Code
   curl https://mac20028.github.io/allcode.txt -o AllCode.java
+
+LINUX TCL CODE
+
+Bus Topology
+  curl https://mac20028.github.io/bus%20topology.txt -o bus_final.tcl
+
+Congestion tcp vs udp
+  curl https://mac20028.github.io/congestion%20tcp%20vs%20udp.txt -o congestion_tcp_udp.tcl
+
+10 Mobiles
+  curl https://mac20028.github.io/10%20mobiles.txt -o mobiles_10.tcl
+
+Mesh Topology
+  curl https://mac20028.github.io/mesh%20topology.txt -o mesh_topology.tcl
+
+Ring Topology
+  curl https://mac20028.github.io/ring%20toplogy.txt -o ring_topology.tcl
+
+Star Topology
+  curl https://mac20028.github.io/star%20topology.txt -o star_topology.tcl
